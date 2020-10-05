@@ -3,3 +3,6 @@ __pycache__/
 # *.docx
 .vscode/
 cifar-10-batches-py
+*_modified*
+thread.py
+stored/

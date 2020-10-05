@@ -64,10 +64,10 @@ def load_CIFAR10(ROOT: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndar
 
 
 def get_CIFAR10_data(
-    num_training: int = 49000,
-    num_validation: int = 1000,
-    num_test: int = 10000,
-    subtract_mean: bool = True,
+        num_training: int = 49000,
+        num_validation: int = 1000,
+        num_test: int = 10000,
+        subtract_mean: bool = True,
 ) -> Dict[str, np.ndarray]:
     """Load the CIFAR-10 dataset from disk and perform preprocessing to prepare
     it for classifiers. These are the same steps as we used for the SVM, but
@@ -97,16 +97,25 @@ def get_CIFAR10_data(
     y_test = y_test[mask]
 
     # Normalize the data: subtract the mean image
-    if subtract_mean:
-        mean_image = np.mean(X_train, axis=0)
-        X_train -= mean_image
-        X_val -= mean_image
-        X_test -= mean_image
+    mean_image = np.mean(X_train, axis=0)
+    X_train -= mean_image
+    X_val -= mean_image
+    X_test -= mean_image
 
-    # Transpose so that channels come first
-    X_train = X_train.transpose(0, 3, 1, 2).copy()
-    X_val = X_val.transpose(0, 3, 1, 2).copy()
-    X_test = X_test.transpose(0, 3, 1, 2).copy()
+    mean_channels = np.ones((32, 32, 3)) * np.mean(X_train, axis=(0, 1, 2))
+    std_channels = np.ones((32, 32, 3)) * np.std(X_train, axis=(0, 1, 2))
+    X_train -= mean_channels
+    X_val -= mean_channels
+    X_test -= mean_channels
+
+    X_train /= std_channels
+    X_val /= std_channels
+    X_test /= std_channels
+
+    # Reshape data to rows
+    X_train = X_train.reshape(num_training, -1)
+    X_val = X_val.reshape(num_validation, -1)
+    X_test = X_test.reshape(num_test, -1)
 
     # Package data into a dictionary
     return {
