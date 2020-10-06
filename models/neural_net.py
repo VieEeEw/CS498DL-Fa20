@@ -22,6 +22,7 @@ class NeuralNetwork:
             hidden_sizes: Sequence[int],
             output_size: int,
             num_layers: int,
+            load=None
     ):
         """Initialize the model. Weights are initialized to small random values
         and biases are initialized to zero. Weights and biases are stored in
@@ -45,19 +46,20 @@ class NeuralNetwork:
         self.hidden_sizes = hidden_sizes
         self.output_size = output_size
         self.num_layers = num_layers
-
-        assert len(hidden_sizes) == (num_layers - 1)
-        sizes = [input_size] + hidden_sizes + [output_size]
-
         self.params = {}
-        for i in range(1, num_layers + 1):
-            self.params["W" + str(i)] = np.random.randn(
-                sizes[i - 1], sizes[i]
-            ) / np.sqrt(sizes[i - 1])
-            self.params["b" + str(i)] = np.zeros(sizes[i])
-
         self.outputs = {}
         self.gradients = {}
+        if load is not None:
+            self.load(load)
+        else:
+            assert len(hidden_sizes) == (num_layers - 1)
+            sizes = [input_size] + hidden_sizes + [output_size]
+
+            for i in range(1, num_layers + 1):
+                self.params["W" + str(i)] = np.random.randn(
+                    sizes[i - 1], sizes[i]
+                ) / np.sqrt(sizes[i - 1])
+                self.params["b" + str(i)] = np.zeros(sizes[i])
 
     @staticmethod
     def linear(W: np.ndarray, X: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -126,6 +128,18 @@ class NeuralNetwork:
                 self.outputs["b" + str(i)] = self.softmax(self.linear(W, I, b))  # what if remove softmax
         return self.outputs["b" + str(self.num_layers)]
 
+    def softmax_grad(self, X_train: np.ndarray, y_train: np.ndarray) -> np.ndarray:
+        grad = np.zeros((1, self.output_size))
+        output = self.forward(X_train)
+        for i, scores in enumerate(output):
+            for j in range(self.output_size):
+                if j == y_train[i]:
+                    grad[0, j] += (scores[j] - 1)
+                else:
+                    grad[0, j] += scores[j]
+        # grad /= X_train.shape[0]
+        return grad
+
     def backward(
             self, X: np.ndarray, y: np.ndarray, lr: float, reg: float = 0.0
     ) -> float:
@@ -144,18 +158,6 @@ class NeuralNetwork:
         """
         y = y.flatten().astype(int)
 
-        def softmax_grad(X_train: np.ndarray, y_train: np.ndarray) -> np.ndarray:
-            grad = np.zeros((1, self.output_size))
-            output = self.forward(X_train)
-            for i, scores in enumerate(output):
-                for j in range(self.output_size):
-                    if j == y_train[i]:
-                        grad[0, j] += (scores[j] - 1)
-                    else:
-                        grad[0, j] += scores[j]
-            # grad /= X_train.shape[0]
-            return grad
-
         loss = 0
         # in self.gradients if you want to be able to debug your gradients
         # later. You can use the same keys as self.params. You can add
@@ -167,7 +169,7 @@ class NeuralNetwork:
             loss -= np.log(out[0, y[k]])
             label = y[k].reshape((1, 1))
             # initialize the upstream gradient to be the gradient wrt the final linear output
-            upstream = softmax_grad(sample, label)
+            upstream = self.softmax_grad(sample, label)
             for i in range(self.num_layers, 0, -1):
                 if i == self.num_layers:
                     # calculate the gradient wrt b in this layer
@@ -201,4 +203,3 @@ class NeuralNetwork:
     def load(self, path_to_weight):
         for file in os.listdir(path_to_weight):
             self.params[file.split('.')[0]] = np.load(os.path.join(path_to_weight, file))
-
