@@ -6,7 +6,8 @@ from glob import glob
 from models.neural_net import NeuralNetwork
 from utils.data_process import get_CIFAR10_data
 from tqdm import tqdm
-from thread import Thread
+from threading import Thread
+import os
 
 plt.rcParams['figure.figsize'] = (10.0, 8.0)
 np.random.seed(27)
@@ -30,12 +31,11 @@ def SGD(input_size=32 * 32 * 3,
         learning_rate=1e-3,
         learning_rate_decay=lambda x, y: x,
         regularization=0.1,
-        load=None):
+        load=None,
+        freeze='stored/'):
     hidden_sizes = [hidden_size] * (num_layers - 1)
     # Initialize a new neural network model
-    net = NeuralNetwork(input_size, hidden_sizes, num_classes, num_layers)
-    if load is not None:
-        net.load(load)
+    net = NeuralNetwork(input_size, hidden_sizes, num_classes, num_layers, load=load)
     for directory in glob('stored/*'):
         rmtree(directory)
     # Variables to store performance for each epoch
@@ -91,9 +91,9 @@ def SGD(input_size=32 * 32 * 3,
             except KeyboardInterrupt:
                 flag = True
             finally:
-                net.freeze(epoch=epoch, accuracy=val_accuracy[epoch])
+                net.freeze(freeze, epoch=epoch, accuracy=val_accuracy[epoch])
     inner.close()
-    return train_loss, train_accuracy, val_accuracy
+    return train_loss / (TRAIN_IMAGES // batch_size), train_accuracy, val_accuracy
 
 
 def Adam(input_size=32 * 32 * 3,
@@ -105,17 +105,14 @@ def Adam(input_size=32 * 32 * 3,
          learning_rate=1e-3,
          learning_rate_decay=lambda x, y: x,
          regularization=0.1,
-         beta1=0.9,
-         beta2=0.999,
-         epsilon=1e-7,
-         load=None
+         load=None,
+         freeze='stored/'
          ):
     hidden_sizes = [hidden_size] * (num_layers - 1)
     # Initialize a new neural network model
-    net = NeuralNetwork(input_size, hidden_sizes, num_classes, num_layers)
-    if load is not None:
-        net.load(load)
-    for directory in glob('stored/*'):
+    net = NeuralNetwork(input_size, hidden_sizes, num_classes, num_layers, load=load)
+
+    for directory in glob(os.path.join(freeze, '*')):
         rmtree(directory)
     # Variables to store performance for each epoch
     train_loss = np.zeros(epochs)
@@ -138,7 +135,7 @@ def Adam(input_size=32 * 32 * 3,
 
             # Run the backward pass of the model to update the weights and compute the loss
             lr = learning_rate_decay(learning_rate, epoch)
-            loss = net.backward(X_batch, y_batch, lr, regularization)
+            loss = net.backAdam(X_batch, y_batch, lr, batch, regularization)
 
             # Run the forward pass of the model to get a prediction and compute the accuracy
             accuracy = np.sum(np.argmax(net.forward(X_batch), axis=1) == y_batch.flatten())
@@ -169,24 +166,31 @@ def Adam(input_size=32 * 32 * 3,
             except KeyboardInterrupt:
                 flag = True
             finally:
-                net.freeze(epoch=epoch, accuracy=val_accuracy[epoch])
-    inner.close()
-    return train_loss, train_accuracy, val_accuracy
+                net.freeze(freeze, epoch=epoch, accuracy=val_accuracy[epoch])
+        inner.close()
+    return train_loss / (TRAIN_IMAGES // batch_size), train_accuracy, val_accuracy
 
 
 if __name__ == '__main__':
     def decay(lr, epoch):
-        if epoch < 2:
-            return lr
-        # return 1e-5 * np.e ** (-0.001 * epoch)
-        return 5e-4
+        # if epoch < 4:
+        #     return lr
+        return lr * np.e ** (-0.005 * epoch)
+        # return 5e-4
 
 
     # train_loss, train_accuracy, val_accuracy = SGD(learning_rate_decay=decay, epochs=25, learning_rate=5e-2,
     #                                                hidden_size=25, regularization=0.1, num_layers=2)
-    train_loss, train_accuracy, val_accuracy = SGD(epochs=15, learning_rate=3e-2,
-                                                   hidden_size=20, regularization=5e-3, num_layers=3,
-                                                   load='stored/epoch26_0.484')
+    # train_loss, train_accuracy, val_accuracy = SGD(epochs=15, learning_rate=3e-2,
+    #                                                hidden_size=20, regularization=5e-3, num_layers=3,
+    #                                                load='stored/epoch26_0.484')
+    # train_loss, train_accuracy, val_accuracy = Adam(epochs=10, learning_rate=5e-5, learning_rate_decay=decay,
+    #                                                 hidden_size=20, regularization=1e-4, num_layers=2,
+    #                                                 freeze="another_stored",
+    #                                                 load='another_stored/epoch0_0.477')
+    train_loss, train_accuracy, val_accuracy = Adam(epochs=10, learning_rate=3e-5, learning_rate_decay=decay,
+                                                    hidden_size=20, regularization=1e-3, num_layers=3,
+                                                    load='stored/epoch0_0.468')
     plt.subplot(2, 1, 1)
     plt.plot(train_loss)
     plt.title('Loss history')

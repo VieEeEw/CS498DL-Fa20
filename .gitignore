@@ -4,9 +4,10 @@ __pycache__/
 .vscode/
 cifar-10-batches-py
 *_modified*
-thread.py
+testing.py
 stored/
 *.bak
+another_stored/
 stored_adam/
 stored_SGD/
 kaggle/

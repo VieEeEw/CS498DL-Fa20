@@ -49,6 +49,8 @@ class NeuralNetwork:
         self.params = {}
         self.outputs = {}
         self.gradients = {}
+        self.vec_params = None
+
         if load is not None:
             self.load(load)
         else:
@@ -60,6 +62,18 @@ class NeuralNetwork:
                     sizes[i - 1], sizes[i]
                 ) / np.sqrt(sizes[i - 1])
                 self.params["b" + str(i)] = np.zeros(sizes[i])
+            for i in range(1, num_layers + 1):
+                if self.vec_params is None:
+                    self.vec_params = self.params["W" + str(i)].flatten()
+                else:
+                    self.vec_params = np.concatenate(
+                        (self.vec_params, self.params["W" + str(i)].flatten()), axis=0)
+
+                self.vec_params = np.concatenate(
+                    (self.vec_params, self.params["b" + str(i)]), axis=0)
+        self.m = np.zeros_like(self.vec_params)
+
+        self.v = np.zeros_like(self.vec_params)
 
     @staticmethod
     def linear(W: np.ndarray, X: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -184,13 +198,88 @@ class NeuralNetwork:
                 if i > 1:  # if this is not the first layer, backpropogate the upstream gradient
                     upstream = this_b_grad @ self.params['W' + str(i)].T
 
-        for i in range(1, self.num_layers + 1):  # cantongjiaoxun
+        for i in range(1, self.num_layers + 1):
             self.gradients["W" + str(i)] /= X.shape[0]
             self.gradients["W" + str(i)] += reg * self.params["W" + str(i)]
             self.params["W" + str(i)] -= lr * self.gradients["W" + str(i)]
             self.gradients["b" + str(i)] /= X.shape[0]
             # self.params["b" + str(i)] -= lr * self.gradients["b" + str(i)]
             self.params["b" + str(i)] -= (lr * self.gradients["b" + str(i)]).flatten()
+        return loss / X.shape[0]
+
+    def backAdam(
+            self, X: np.ndarray, y: np.ndarray, lr: float, batch: int, reg: float = 0.0
+    ) -> float:
+        """Perform back-propagation and update the parameters using the
+        gradients.
+
+        Parameters:
+            X: Input data of shape (N, D). Each X[i] is a training sample
+            y: Vector of training labels. y[i] is the label for X[i], and each
+                y[i] is an integer in the range 0 <= y[i] < C
+            lr: Learning rate
+            reg: Regularization strength
+
+        Returns:
+            Total loss for this batch of training samples
+        """
+        y = y.flatten().astype(int)
+
+        loss = 0
+        # in self.gradients if you want to be able to debug your gradients
+        # later. You can use the same keys as self.params. You can add
+        # functions like self.linear_grad, self.relu_grad, and
+        # self.softmax_grad if it helps organize your code.
+        for k, sample in enumerate(X):
+            sample = sample.reshape((1, -1))
+            out = self.forward(sample)
+            loss -= np.log(out[0, y[k]])
+            label = y[k].reshape((1, 1))
+            # initialize the upstream gradient to be the gradient wrt the final linear output
+            upstream = self.softmax_grad(sample, label)
+            for i in range(self.num_layers, 0, -1):
+                if i == self.num_layers:
+                    # calculate the gradient wrt b in this layer
+                    this_b_grad = upstream
+                else:
+                    # pass gradient through the ReLU function
+                    this_b_grad = upstream * (self.outputs['b' + str(i)] > 0)
+                # accumulate the gradient of this sample in the batch
+                self.gradients["b" + str(i)] = self.gradients.get("b" + str(i), 0) + this_b_grad
+                self.gradients["W" + str(i)] = self.gradients.get("W" + str(i), 0) + (
+                        self.outputs["b" + str(i - 1)].T @ this_b_grad)  # @ self.gradients["b"+str(i)])
+                if i > 1:  # if this is not the first layer, backpropogate the upstream gradient
+                    upstream = this_b_grad @ self.params['W' + str(i)].T
+
+        t = batch + 1
+        vec_grad = None
+        beta1, beta2, epsilon = 0.9, 0.999, 1e-8
+        for i in range(1, self.num_layers + 1):
+            self.gradients["W" + str(i)] /= X.shape[0]
+            self.gradients["W" + str(i)] += reg * self.params["W" + str(i)]
+            if vec_grad is None:
+                vec_grad = self.gradients["W" + str(i)].flatten().copy()
+            else:
+                vec_grad = np.concatenate((vec_grad, self.gradients["W" + str(i)].flatten()), axis=0)
+            self.gradients["b" + str(i)] /= X.shape[0]
+            vec_grad = np.concatenate((vec_grad, self.gradients["b" + str(i)].flatten()), axis=0)
+
+        self.m = (beta1 * self.m) + ((1 - beta1) * vec_grad)
+        self.v = (beta2 * self.v) + ((1 - beta2) * (vec_grad ** 2))
+        m_tilda = self.m / (1 - (beta1 ** t))
+        v_tilda = self.v / (1 - (beta2 ** t))
+        self.vec_params = self.vec_params - (lr * m_tilda / ((v_tilda ** 0.5) + epsilon))
+
+        # unpack params into their original shapes
+        start = 0
+        for i in range(1, self.num_layers + 1):
+            inc = self.params["W" + str(i)].size
+            self.params["W" + str(i)] = self.vec_params[start:start + inc].reshape(self.params["W" + str(i)].shape)
+            start += inc
+            inc = self.params["b" + str(i)].size
+            self.params["b" + str(i)] = self.vec_params[start:start + inc]
+            start += inc
+
         return loss / X.shape[0]
 
     def freeze(self, path_to_dir='stored/', epoch=0, accuracy=0):
@@ -203,3 +292,11 @@ class NeuralNetwork:
     def load(self, path_to_weight):
         for file in os.listdir(path_to_weight):
             self.params[file.split('.')[0]] = np.load(os.path.join(path_to_weight, file))
+        for i in range(1, self.num_layers + 1):
+            if self.vec_params is None:
+                self.vec_params = self.params["W" + str(i)].flatten()
+            else:
+                self.vec_params = np.concatenate(
+                    (self.vec_params, self.params["W" + str(i)].flatten()), axis=0)
+            self.vec_params = np.concatenate(
+                (self.vec_params, self.params["b" + str(i)]), axis=0)
