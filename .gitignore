@@ -1,0 +1,13 @@
+.idea/
+__pycache__/
+.vscode/
+.ipynb_checkpoints/
+
+*_modified*
+_test*
+
+*.bak
+
+kaggle/
+VOC*
+*.tar*
