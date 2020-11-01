@@ -168,10 +168,11 @@ def main(flags):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p', '--path')
+    parser.add_argument('-p', '--path', default='../assignment3-1/VOCdevkit_2007')
     parser.add_argument('-d', '--device', default='cuda:0')
     parser.add_argument('-e', '--epochs', type=int, default=20)
     parser.add_argument('-b', '--batches', type=int, default=50)
     parser.add_argument('--adam', type=bool, default=False)
     parser.add_argument('-f', '--frequency', type=int, default=4)
     args = parser.parse_args()
+    main(args)
