@@ -135,9 +135,9 @@ def main(flags):
         transforms.ToTensor(),
         normalize,
     ])
-    ds_train = VocDataset(f'{voc_path}/VOC2007/', 'train', train_transform)
-    ds_val = VocDataset(f'{voc_path}/VOC2007/', 'val', test_transform)
-    ds_test = VocDataset(f'{voc_path}/VOC2007test/', 'test', test_transform)
+    ds_train = VocDataset(os.path.join(voc_path, 'VOC2007/'), 'train', train_transform)
+    ds_val = VocDataset(os.path.join(voc_path, 'VOC2007/'), 'val', test_transform)
+    ds_test = VocDataset(os.path.join(voc_path, 'VOC2007test/'), 'test', test_transform)
 
     train_loader = torch.utils.data.DataLoader(dataset=ds_train,
                                                batch_size=batch_size,
