@@ -4,10 +4,17 @@ __pycache__/
 .ipynb_checkpoints/
 
 *_modified*
-_test*
+test.*
 
 *.bak
 
 kaggle/
 VOC*
 *.tar*
+
+venv
+
+stored/*
+
+*.pth
+*.csv

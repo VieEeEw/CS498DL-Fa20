@@ -1,0 +1,16 @@
+(increasing conv shape with no dropout)
+default Adam, epoch 20, batch 50:
+Almost no result.
+
+Default SGD, epoch 20, batch 50
+Still no result
+
+(Increasing then decreasing conv shape with no dropout)
+Still no result. Seems gradient varnishing?
+
+(Adding batch norm to the model)
+Still no result
+
+(Completely change the architecture similar to VGG16, with bn)
+SGD
+Still no improvement
