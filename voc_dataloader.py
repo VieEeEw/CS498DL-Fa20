@@ -35,7 +35,7 @@ class VocDataset(data.Dataset):
 
         y = self.labels[index]
         z = self.box_indices[index]
-        return x, y, z
+        return x, y, np.array([0])
 
     def __len__(self):
         return len(self.names)
