@@ -11,7 +11,10 @@ test.*
 kaggle/
 *.tar*
 *.zip*
+
+language_data/
 celeba_data/
+shakespeare.txt
 
 venv/
 
