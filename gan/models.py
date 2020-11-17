@@ -31,18 +31,19 @@ class Generator(torch.nn.Module):
             nn.ConvTranspose2d(noise_dim, 1024, 4),
             nn.BatchNorm2d(1024),
             nn.ReLU(),
-            nn.ConvTranspose2d(1024, 512, 8),
+            nn.ConvTranspose2d(1024, 512, 8, 2),
             nn.BatchNorm2d(512),
             nn.ReLU(),
-            nn.ConvTranspose2d(512, 256, 16),
+            nn.ConvTranspose2d(512, 256, 16, 2),
             nn.BatchNorm2d(256),
             nn.ReLU(),
-            nn.ConvTranspose2d(256, 128, 32),
+            nn.ConvTranspose2d(256, 128, 32, 2),
             nn.BatchNorm2d(1024),
             nn.ReLU(),
-            nn.ConvTranspose2d(128, out_ch, 64),
+            nn.ConvTranspose2d(128, out_ch, 64, 2),
             nn.Tanh()
         )
 
     def forward(self, x):
-        return self.model(x.view(-1, self.noise_dim, 1, 1))
+        x = self.model(x)
+        return x
