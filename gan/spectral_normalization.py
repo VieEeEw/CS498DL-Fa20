@@ -8,11 +8,8 @@ from torch import Tensor
 from torch.nn import Parameter
 
 
-def l2normalize(v, eps=1e-12):
-    """
-    TODO: Implement L2 normalization.
-    """
-    return v
+def l2normalize(v: torch.Tensor, eps=1e-12):
+    return v / (v.norm() + eps)
 
 
 class SpectralNorm(nn.Module):
@@ -29,12 +26,22 @@ class SpectralNorm(nn.Module):
 
     def _update_u_v(self):
         """
-        TODO: Implement Spectral Normalization
         Hint: 1: Use getattr to first extract u, v, w.
               2: Apply power iteration.
               3: Calculate w with the spectral norm.
               4: Use setattr to update w in the module.
         """
+        u = getattr(self.module, f'{self.name}_u')
+        v = getattr(self.module, f'{self.name}_v')
+        w = getattr(self.module, f'{self.name}_bar')
+
+        height = w.data.shape[0]
+
+        with torch.no_grad():
+            for _ in range(self.power_iterations):
+                v.data = l2normalize(torch.mv(torch.t(w.view(height, -1)).data, u.data))
+                u.data = l2normalize(torch.mv(w.view(height, -1).data, v.data))
+        setattr(self.module, self.name, w / u.dot(w.view(height, -1).mv(v)).expand_as(w))
 
     def _make_params(self):
         """
