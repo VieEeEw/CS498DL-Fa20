@@ -55,7 +55,7 @@ def train(disc, gen, d_opt, g_opt, discriminator_loss, generator_loss, show_ever
             _, input_channels, img_size, _ = x.shape
             real_images = preprocess_img(x).to(device)
             d_opt.zero_grad()
-            noise = sample_noise(batch_size, noise_size).reshape(-1, noise_size, 1, 1).to(device)
+            noise = sample_noise(batch_size, noise_size).reshape(batch_size, noise_size, 1, 1).to(device)
             fake_images = gen(noise)
             fake, real = disc(fake_images), disc(real_images)
             d_error = discriminator_loss(real, fake)
@@ -63,7 +63,7 @@ def train(disc, gen, d_opt, g_opt, discriminator_loss, generator_loss, show_ever
             d_opt.step()
 
             g_opt.zero_grad()
-            noise = sample_noise(batch_size, noise_size).reshape(-1, noise_size, 1, 1).to(device)
+            noise = sample_noise(batch_size, noise_size).reshape(batch_size, noise_size, 1, 1).to(device)
             fake_images = gen(noise)
             fake = disc(fake_images)
             g_error = generator_loss(fake)
