@@ -7,21 +7,20 @@ from torch import nn
 class Discriminator(torch.nn.Module):
     def __init__(self, in_ch=3):
         super(Discriminator, self).__init__()
-        self.conv1 = sn(nn.Conv2d(in_ch, 128, 5, 2))
-        self.conv2 = sn(nn.Conv2d(128, 256, 5, 2))
-        self.conv3 = sn(nn.Conv2d(256, 512, 5, 2))
-        self.conv4 = sn(nn.Conv2d(512, 1024, 5, 2))
-        self.fc = sn(nn.Linear(12, 1))
+        self.model = nn.Sequential(
+            sn(nn.Conv2d(in_ch, 128, 5, 2, 1)),
+            nn.LeakyReLU(0.2),
+            sn(nn.Conv2d(128, 256, 5, 2, 1)),
+            nn.LeakyReLU(0.2),
+            sn(nn.Conv2d(256, 512, 5, 2, 1)),
+            nn.LeakyReLU(0.2),
+            sn(nn.Conv2d(512, 1024, 5, 2, 1)),
+            nn.LeakyReLU(0.2),
+            nn.Conv2d(1024, 1, 4, 1, 1)
+        )
 
     def forward(self, x):
-        x = F.leaky_relu(self.conv1(x))
-        x = F.leaky_relu(self.conv2(x))
-        x = F.leaky_relu(self.conv3(x))
-        x = F.leaky_relu(self.conv4(x))
-        print(x.size())
-        x = x.view(12)
-        x = self.fc(x)
-        return x
+        return self.model(x)
 
 
 class Generator(torch.nn.Module):
