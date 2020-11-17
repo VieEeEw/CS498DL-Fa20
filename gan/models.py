@@ -5,9 +5,9 @@ from torch import nn
 
 
 class Discriminator(torch.nn.Module):
-    def __init__(self, input_channels=3):
+    def __init__(self, in_ch=3):
         super(Discriminator, self).__init__()
-        self.conv1 = sn(nn.Conv2d(3, 128, 5, 2))
+        self.conv1 = sn(nn.Conv2d(in_ch, 128, 5, 2))
         self.conv2 = sn(nn.Conv2d(128, 256, 5, 2))
         self.conv3 = sn(nn.Conv2d(256, 512, 5, 2))
         self.conv4 = sn(nn.Conv2d(512, 1024, 5, 2))
