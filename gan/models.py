@@ -8,13 +8,13 @@ class Discriminator(torch.nn.Module):
     def __init__(self, in_ch=3):
         super(Discriminator, self).__init__()
         self.model = nn.Sequential(
-            sn(nn.Conv2d(in_ch, 128, 5, 2, 1)),
+            sn(nn.Conv2d(in_ch, 128, 4, 2, 1)),
             nn.LeakyReLU(0.2),
-            sn(nn.Conv2d(128, 256, 5, 2, 1)),
+            sn(nn.Conv2d(128, 256, 4, 2, 1)),
             nn.LeakyReLU(0.2),
-            sn(nn.Conv2d(256, 512, 5, 2, 1)),
+            sn(nn.Conv2d(256, 512, 4, 2, 1)),
             nn.LeakyReLU(0.2),
-            sn(nn.Conv2d(512, 1024, 5, 2, 1)),
+            sn(nn.Conv2d(512, 1024, 4, 2, 1)),
             nn.LeakyReLU(0.2),
             nn.Conv2d(1024, 1, 4, 1, 1)
         )
@@ -26,21 +26,20 @@ class Discriminator(torch.nn.Module):
 class Generator(torch.nn.Module):
     def __init__(self, noise_dim, out_ch=3):
         super(Generator, self).__init__()
-        self.noise_dim = noise_dim
         self.model = nn.Sequential(
-            nn.ConvTranspose2d(noise_dim, 1024, 4),
+            nn.ConvTranspose2d(noise_dim, 1024, 4, padding=0),
             nn.BatchNorm2d(1024),
             nn.ReLU(),
-            nn.ConvTranspose2d(1024, 512, 8, 2),
+            nn.ConvTranspose2d(1024, 512, 4, 2),
             nn.BatchNorm2d(512),
             nn.ReLU(),
-            nn.ConvTranspose2d(512, 256, 16, 2),
+            nn.ConvTranspose2d(512, 256, 4, 2),
             nn.BatchNorm2d(256),
             nn.ReLU(),
-            nn.ConvTranspose2d(256, 128, 32, 2),
-            nn.BatchNorm2d(1024),
+            nn.ConvTranspose2d(256, 128, 4, 2),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
-            nn.ConvTranspose2d(128, out_ch, 64, 2),
+            nn.ConvTranspose2d(128, out_ch, 4, 2),
             nn.Tanh()
         )
 

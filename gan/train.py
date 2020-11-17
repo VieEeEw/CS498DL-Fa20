@@ -1,11 +1,15 @@
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from tqdm import tqdm
+from glob import glob
+import torch
+import os
+import shutil
 
 from gan.utils import sample_noise, show_images, deprocess_img, preprocess_img
 
 
-def train(D, G, D_solver, G_solver, discriminator_loss, generator_loss, show_every=250,
+def train(disc, gen, d_opt, g_opt, discriminator_loss, generator_loss, show_every=250,
           batch_size=128, noise_size=100, num_epochs=10, train_loader=None, device=None):
     """
     Train loop for GAN.
@@ -44,27 +48,39 @@ def train(D, G, D_solver, G_solver, discriminator_loss, generator_loss, show_eve
     - device: PyTorch device
     """
     iter_count = 0
+    for folder in glob('stored/epoch*'):
+        shutil.rmtree(folder)
     for epoch in range(num_epochs):
-
-        for x, _ in tqdm(train_loader, desc="Training", position=0, leave=False):
+        for x, _ in tqdm(train_loader, desc=f"Training {epoch + 1}/{num_epochs}", position=0, leave=False):
             _, input_channels, img_size, _ = x.shape
+            real_images = preprocess_img(x).to(device)
+            d_opt.zero_grad()
+            noise = sample_noise(batch_size, noise_size).reshape(-1, noise_size, 1, 1).to(device)
+            fake_images = gen(noise)
+            fake, real = disc(fake_images), disc(real_images)
+            d_error = discriminator_loss(real, fake)
+            d_error.backward()
+            d_opt.step()
 
-            real_images = preprocess_img(x).to(device)  # normalize
-
-            # Store discriminator loss output, generator loss output, and fake image output
-            # in these variables for logging and visualization below
-            d_error = None
-            g_error = None
-            fake_images = None
-
+            g_opt.zero_grad()
+            noise = sample_noise(batch_size, noise_size).reshape(-1, noise_size, 1, 1).to(device)
+            fake_images = gen(noise)
+            fake = disc(fake_images)
+            g_error = generator_loss(fake)
+            g_error.backward()
+            g_opt.step()
 
             # Logging and output visualization
             if iter_count % show_every == 0:
-                print('Iter: {}, D: {:.4}, G:{:.4}'.format(iter_count, d_error.item(), g_error.item()))
-                disp_fake_images = deprocess_img(fake_images.data)  # denormalize
+                print('\nIter: {}, D: {:.4}, G:{:.4}, saving...'.format(iter_count, d_error.item(), g_error.item()))
+                dir_name = f'stored/epoch{epoch}_{round(d_error.item(), 3)}_{round(g_error.item(), 3)}'
+                os.mkdir(dir_name)
+                torch.save(gen.state_dict(), os.path.join(dir_name, 'generator.pth'))
+                torch.save(disc.state_dict(), os.path.join(dir_name, 'discriminator.pth'))
+                disp_fake_images = deprocess_img(fake_images.data)
                 imgs_numpy = disp_fake_images.cpu().numpy()
                 show_images(imgs_numpy[0:16], color=input_channels != 1)
+                plt.savefig(os.path.join(dir_name, 'plot.png'))
                 plt.show()
-                print()
+
             iter_count += 1
-        print('EPOCH: ', (epoch + 1))
