@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from tqdm import tqdm
 
 from gan.utils import sample_noise, show_images, deprocess_img, preprocess_img
 
@@ -44,8 +45,8 @@ def train(D, G, D_solver, G_solver, discriminator_loss, generator_loss, show_eve
     """
     iter_count = 0
     for epoch in range(num_epochs):
-        print('EPOCH: ', (epoch + 1))
-        for x, _ in train_loader:
+
+        for x, _ in tqdm(train_loader, desc="Training", position=0, leave=False):
             _, input_channels, img_size, _ = x.shape
 
             real_images = preprocess_img(x).to(device)  # normalize
@@ -56,11 +57,6 @@ def train(D, G, D_solver, G_solver, discriminator_loss, generator_loss, show_eve
             g_error = None
             fake_images = None
 
-            ####################################
-            #          YOUR CODE HERE          #
-            ####################################
-
-            ##########       END      ##########
 
             # Logging and output visualization
             if iter_count % show_every == 0:
@@ -71,3 +67,4 @@ def train(D, G, D_solver, G_solver, discriminator_loss, generator_loss, show_eve
                 plt.show()
                 print()
             iter_count += 1
+        print('EPOCH: ', (epoch + 1))
